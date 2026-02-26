@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("mailtm-server")
 
-mcp = FastMCP("mailtm")
+mcp = FastMCP("mailtm", host="0.0.0.0", port=8000)
 
 BASE_URL = "https://api.mail.tm"
 SESSION_FILE = "/tmp/mailtm_session.json"
@@ -426,7 +426,7 @@ if __name__ == "__main__":
     if _session.get("address"):
         logger.info(f"Restored session for: {_session['address']}")
     try:
-        mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+        mcp.run(transport="streamable-http")
     except Exception as e:
         logger.error(f"Server error: {e}", exc_info=True)
         sys.exit(1)
