@@ -426,7 +426,7 @@ if __name__ == "__main__":
     if _session.get("address"):
         logger.info(f"Restored session for: {_session['address']}")
     try:
-        mcp.run(transport='stdio')
+        mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
     except Exception as e:
         logger.error(f"Server error: {e}", exc_info=True)
         sys.exit(1)
