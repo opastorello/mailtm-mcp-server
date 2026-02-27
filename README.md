@@ -22,11 +22,14 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that 
 
 ## Transport
 
-The server runs as an **HTTP MCP server** (`streamable-http`) on port `8000`, endpoint `/mcp`.
+The server runs as a **streamable-http** MCP server on port `8000`, endpoint `/mcp`.
 
-This makes it compatible with:
-- [mcpjungle](https://github.com/mcpjungle/mcpjungle) and other HTTP-based MCP hosts
-- Any MCP client that supports the `streamable-http` or `http` transport
+Compatible with:
+- [mcpjungle](https://github.com/mcpjungle/mcpjungle)
+- Claude Desktop (HTTP mode)
+- Any MCP client that supports `streamable-http`
+
+---
 
 ## Quick Start
 
@@ -37,13 +40,13 @@ curl -O https://raw.githubusercontent.com/opastorello/mailtm-mcp-server/master/d
 docker compose up -d
 ```
 
-The server will be available at `http://localhost:8000/mcp`.
+Server available at `http://localhost:8000/mcp`.
 
 ### Docker (manual)
 
 ```bash
 docker pull ghcr.io/opastorello/mailtm-mcp-server:latest
-docker run -d -p 8000:8000 -v mailtm-session:/tmp ghcr.io/opastorello/mailtm-mcp-server:latest
+docker run -d -p 8000:8000 -v mailtm-session:/tmp --name mailtm ghcr.io/opastorello/mailtm-mcp-server:latest
 ```
 
 ### Local (no Docker)
@@ -55,13 +58,17 @@ python mailtm_server.py
 
 Requires Python 3.11+.
 
+---
+
 ## Register with mcpjungle
+
+### Standalone (mcpjungle on the host)
 
 ```bash
 cat > /tmp/mailtm.json << 'EOF'
 {
   "name": "mailtm",
-  "transport": "http",
+  "transport": "streamable_http",
   "url": "http://localhost:8000/mcp"
 }
 EOF
@@ -69,20 +76,53 @@ EOF
 mcpjungle register -c /tmp/mailtm.json
 ```
 
-## Configure in Claude Desktop
+### mcpjungle running in Docker (same host)
 
-```json
+When mcpjungle runs inside Docker, `localhost` doesn't resolve to the host. You need both containers on the same Docker network.
+
+The included `docker-compose.yml` handles this automatically — it joins the `opt_default` network (mcpjungle's default network) and sets a fixed container name `mailtm` so the hostname never changes across restarts.
+
+```bash
+# Download and start
+curl -O https://raw.githubusercontent.com/opastorello/mailtm-mcp-server/master/docker-compose.yml
+docker compose up -d
+
+# Register using the container hostname
+cat > /tmp/mailtm.json << 'EOF'
 {
-  "mcpServers": {
-    "mailtm": {
-      "command": "docker",
-      "args": ["run", "--rm", "-i", "-p", "8000:8000", "ghcr.io/opastorello/mailtm-mcp-server:latest"]
-    }
-  }
+  "name": "mailtm",
+  "transport": "streamable_http",
+  "url": "http://mailtm:8000/mcp"
 }
+EOF
+
+mcpjungle register -c /tmp/mailtm.json
 ```
 
-Or pointing to an already-running instance:
+> **Note:** The transport value is `streamable_http` (underscore), not `http` — this is mcpjungle-specific.
+
+> **Note:** `host.docker.internal` does not work on Linux. Use the container name or a fixed IP instead.
+
+To re-register after changes:
+
+```bash
+mcpjungle deregister mailtm
+mcpjungle register -c /tmp/mailtm.json
+```
+
+### Invoke tools via mcpjungle CLI
+
+```bash
+mcpjungle invoke mailtm__create_temp_email
+mcpjungle invoke mailtm__get_inbox
+mcpjungle invoke mailtm__list_domains
+```
+
+---
+
+## Configure in Claude Desktop
+
+Pointing to a running instance:
 
 ```json
 {
@@ -94,6 +134,8 @@ Or pointing to an already-running instance:
 }
 ```
 
+---
+
 ## Session Management
 
 The server stores the active session in `/tmp/mailtm_session.json`:
@@ -102,6 +144,8 @@ The server stores the active session in `/tmp/mailtm_session.json`:
 - Mount `/tmp` as a Docker volume to survive container restarts.
 - `logout()` clears the session without deleting the account.
 - `delete_account()` deletes the account and clears the session.
+
+---
 
 ## Example Workflow
 
@@ -112,11 +156,15 @@ The server stores the active session in `/tmp/mailtm_session.json`:
 4. delete_account()              → clean up when done
 ```
 
+---
+
 ## Dependencies
 
 - [`mcp[cli]`](https://pypi.org/project/mcp/) >= 1.2.0 — FastMCP server framework
 - [`requests`](https://pypi.org/project/requests/) >= 2.31.0 — HTTP client for the mail.tm API
 
+---
+
 ## License
 
-MIT
+MIT — [Nícolas Pastorello](https://github.com/opastorello)
