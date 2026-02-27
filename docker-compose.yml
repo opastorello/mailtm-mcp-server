@@ -6,6 +6,15 @@ services:
       - "8000:8000"
     volumes:
       - mailtm-session:/tmp
+    networks:
+      - default
+      - mcpjungle
 
 volumes:
   mailtm-session:
+
+networks:
+  default:
+  mcpjungle:
+    external: true
+    name: opt_default
